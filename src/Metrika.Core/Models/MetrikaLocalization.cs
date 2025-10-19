@@ -52,6 +52,16 @@ namespace Metrika.Core.Models
         public string GCPressure { get; set; } = "GC PRESSURE";
 
         /// <summary>
+        /// Text shown for milliseconds unit (e.g., "ms", "ms")
+        /// </summary>
+        public string Milliseconds { get; set; } = "ms";
+
+        /// <summary>
+        /// Text shown for threshold (e.g., "threshold", "eşik")
+        /// </summary>
+        public string Threshold { get; set; } = "threshold";
+
+        /// <summary>
         /// Default English localization
         /// </summary>
         public static MetrikaLocalization English => new()
@@ -63,7 +73,9 @@ namespace Metrika.Core.Models
             Memory = "Memory",
             GarbageCollection = "GC",
             HighMemory = "HIGH MEMORY",
-            GCPressure = "GC PRESSURE"
+            GCPressure = "GC PRESSURE",
+            Milliseconds = "ms",
+            Threshold = "threshold"
         };
 
         /// <summary>
@@ -78,7 +90,9 @@ namespace Metrika.Core.Models
             Memory = "Bellek",
             GarbageCollection = "GC",
             HighMemory = "YÜKSEK BELLEK",
-            GCPressure = "GC BASKISI"
+            GCPressure = "GC BASKISI",
+            Milliseconds = "ms",
+            Threshold = "eşik"
         };
 
         /// <summary>
@@ -93,7 +107,9 @@ namespace Metrika.Core.Models
             Memory = "Mémoire",
             GarbageCollection = "GC",
             HighMemory = "MÉMOIRE ÉLEVÉE",
-            GCPressure = "PRESSION GC"
+            GCPressure = "PRESSION GC",
+            Milliseconds = "ms",
+            Threshold = "seuil"
         };
 
         /// <summary>
@@ -108,7 +124,9 @@ namespace Metrika.Core.Models
             Memory = "Speicher",
             GarbageCollection = "GC",
             HighMemory = "HOHER SPEICHER",
-            GCPressure = "GC-DRUCK"
+            GCPressure = "GC-DRUCK",
+            Milliseconds = "ms",
+            Threshold = "Schwelle"
         };
 
         /// <summary>
@@ -123,7 +141,9 @@ namespace Metrika.Core.Models
             Memory = "Memoria",
             GarbageCollection = "GC",
             HighMemory = "MEMORIA ALTA",
-            GCPressure = "PRESIÓN GC"
+            GCPressure = "PRESIÓN GC",
+            Milliseconds = "ms",
+            Threshold = "umbral"
         };
 
         /// <summary>
@@ -138,7 +158,9 @@ namespace Metrika.Core.Models
             Memory = "メモリ",
             GarbageCollection = "GC",
             HighMemory = "高メモリ使用",
-            GCPressure = "GC圧力"
+            GCPressure = "GC圧力",
+            Milliseconds = "ミリ秒",
+            Threshold = "閾値"
         };
 
         /// <summary>
@@ -153,7 +175,9 @@ namespace Metrika.Core.Models
             Memory = "内存",
             GarbageCollection = "GC",
             HighMemory = "高内存",
-            GCPressure = "GC压力"
+            GCPressure = "GC压力",
+            Milliseconds = "毫秒",
+            Threshold = "阈值"
         };
 
         /// <summary>
@@ -168,7 +192,9 @@ namespace Metrika.Core.Models
             Memory = "Память",
             GarbageCollection = "GC",
             HighMemory = "ВЫСОКАЯ ПАМЯТЬ",
-            GCPressure = "ДАВЛЕНИЕ GC"
+            GCPressure = "ДАВЛЕНИЕ GC",
+            Milliseconds = "мс",
+            Threshold = "порог"
         };
 
         /// <summary>
@@ -183,7 +209,9 @@ namespace Metrika.Core.Models
             Memory = "Memória",
             GarbageCollection = "GC",
             HighMemory = "MEMÓRIA ALTA",
-            GCPressure = "PRESSÃO GC"
+            GCPressure = "PRESSÃO GC",
+            Milliseconds = "ms",
+            Threshold = "limiar"
         };
 
         /// <summary>
@@ -198,7 +226,9 @@ namespace Metrika.Core.Models
             Memory = "Memoria",
             GarbageCollection = "GC",
             HighMemory = "MEMORIA ALTA",
-            GCPressure = "PRESSIONE GC"
+            GCPressure = "PRESSIONE GC",
+            Milliseconds = "ms",
+            Threshold = "soglia"
         };
     }
 }
