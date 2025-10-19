@@ -1,0 +1,82 @@
+name: Publish to NuGet
+
+on:
+  push:
+    tags:
+      - 'v*.*.*' 
+
+env:
+  DOTNET_VERSION: '9.0.x'
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0 
+        
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+        
+    - name: Extract version from tag
+      id: version
+      run: |
+        TAG=${GITHUB_REF#refs/tags/v}
+        echo "VERSION=$TAG" >> $GITHUB_OUTPUT
+        echo "📦 Package version will be: $TAG"
+        
+    - name: Restore dependencies
+      run: dotnet restore
+      
+    - name: Build solution
+      run: dotnet build --configuration Release --no-restore
+      
+    - name: Run tests
+      run: dotnet test --configuration Release --no-build --verbosity normal
+      
+    - name: Pack Metrika.Core
+      run: |
+        dotnet pack Metrika.Core/Metrika.Core.csproj \
+          --configuration Release \
+          --no-build \
+          --output ./artifacts \
+          /p:Version=${{ steps.version.outputs.VERSION }}
+          
+    - name: Pack Metrika.Console
+      run: |
+        dotnet pack Metrika.Console/Metrika.Console.csproj \
+          --configuration Release \
+          --no-build \
+          --output ./artifacts \
+          /p:Version=${{ steps.version.outputs.VERSION }}
+          
+    - name: List generated packages
+      run: |
+        echo "📦 Generated NuGet packages:"
+        ls -lh ./artifacts/*.nupkg
+        echo ""
+        echo "Package details:"
+        for pkg in ./artifacts/*.nupkg; do
+          echo "  - $(basename $pkg)"
+        done
+        
+    - name: Publish to NuGet.org
+      run: |
+        echo "🚀 Publishing packages to NuGet.org..."
+        dotnet nuget push ./artifacts/*.nupkg \
+          --api-key ${{ secrets.NUGET_API_KEY }} \
+          --source https://api.nuget.org/v3/index.json \
+          --skip-duplicate
+        echo "✅ Publishing completed!"
+          
+    - name: Upload artifacts to GitHub
+      uses: actions/upload-artifact@v4
+      with:
+        name: nuget-packages-v${{ steps.version.outputs.VERSION }}
+        path: ./artifacts/*.nupkg
+        retention-days: 90

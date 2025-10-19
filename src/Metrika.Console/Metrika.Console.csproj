@@ -1,13 +1,39 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <ItemGroup>
-    <ProjectReference Include="..\Metrika.Core\Metrika.Core.csproj" />
-  </ItemGroup>
+	<PropertyGroup>
+		<TargetFramework>net9.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<PackageId>Metrika.Console</PackageId>
+		<Version>1.0.0</Version>
+		<Authors>Ali Ergüç</Authors>
+		<Company>Ali Ergüç</Company>
+		<Description>Console logger implementation for Metrika with beautiful color-coded output. Supports 4 color schemes and customizable formatting.</Description>
+		<Copyright>Copyright © 2025 Ali Ergüç</Copyright>
+		<PackageProjectUrl>https://github.com/alierguc1/Metrika</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/alierguc1/Metrika.git</RepositoryUrl>
+		<RepositoryType>git</RepositoryType>
+		<PackageTags>performance;measurement;logging;console;colorful;metrics</PackageTags>
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<PackageIcon>icon.png</PackageIcon>
+		<PackageReleaseNotes>Initial release with 4 color schemes and multi-language support.</PackageReleaseNotes>
+		<IncludeSymbols>true</IncludeSymbols>
+		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
+		<GenerateDocumentationFile>true</GenerateDocumentationFile>
+	</PropertyGroup>
 
-  <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-  </PropertyGroup>
+	<ItemGroup>
+		<None Include="..\..\README.md" Pack="true" PackagePath="\" />
+		<None Include="..\..\assets\icon.png" Pack="true" PackagePath="\" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\Metrika.Core\Metrika.Core.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
+	</ItemGroup>
 
 </Project>
