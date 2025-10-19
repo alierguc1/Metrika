@@ -41,7 +41,7 @@ jobs:
       
     - name: Pack Metrika.Core
       run: |
-        dotnet pack Metrika.Core/Metrika.Core.csproj \
+        dotnet pack src/Metrika.Core/Metrika.Core.csproj \
           --configuration Release \
           --no-build \
           --output ./artifacts \
@@ -49,7 +49,7 @@ jobs:
           
     - name: Pack Metrika.Console
       run: |
-        dotnet pack Metrika.Console/Metrika.Console.csproj \
+        dotnet pack src/Metrika.Console/Metrika.Console.csproj \
           --configuration Release \
           --no-build \
           --output ./artifacts \
