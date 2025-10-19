@@ -793,7 +793,7 @@ If you find this project helpful, please give it a ⭐️ on GitHub!
 ## 📞 Contact
 
 - GitHub: [@alierguc1](https://github.com/alierguc1)
-- Email: your.email@example.com
+- Email: alierguc1@gmail.com
 
 ---
 
