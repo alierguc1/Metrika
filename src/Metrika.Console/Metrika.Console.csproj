@@ -16,7 +16,7 @@
 		<PackageTags>performance;measurement;logging;console;colorful;metrics</PackageTags>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
-		<PackageIcon>icon.png</PackageIcon>
+		<PackageIcon>Metrika_128x128.png</PackageIcon>
 		<PackageReleaseNotes>Initial release with 4 color schemes and multi-language support.</PackageReleaseNotes>
 		<IncludeSymbols>true</IncludeSymbols>
 		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
@@ -25,7 +25,7 @@
 
 	<ItemGroup>
 		<None Include="..\..\README.md" Pack="true" PackagePath="\" />
-		<None Include="..\..\assets\icon.png" Pack="true" PackagePath="\" />
+		<None Include="..\..\assets\Metrika_128x128.png" Pack="true" PackagePath="\" />
 	</ItemGroup>
 
 	<ItemGroup>

@@ -16,7 +16,7 @@
 		<PackageTags>performance;measurement;logging;metrics;profiling;diagnostics</PackageTags>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
-		<PackageIcon>icon.png</PackageIcon>
+		<PackageIcon>Metrika_128x128.png</PackageIcon>
 		<PackageReleaseNotes>Initial release with fluent API, memory tracking, and multi-language support.</PackageReleaseNotes>
 		<IncludeSymbols>true</IncludeSymbols>
 		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
