@@ -3,16 +3,16 @@
 
 <p align="center">
   <a href="https://www.nuget.org/packages/Metrika.Core/">
-    <img src="https://img.shields.io/nuget/v/Metrika.Core?style=flat-square&logo=nuget" alt="NuGet Core">
+    <img src="https://img.shields.io/nuget/v/Metrika.Core?style=flat-square&logo=nuget&label=Core" alt="NuGet Core">
   </a>
   <a href="https://www.nuget.org/packages/Metrika.Console/">
-    <img src="https://img.shields.io/nuget/v/Metrika.Console?style=flat-square&logo=nuget&color=blue" alt="NuGet Console">
+    <img src="https://img.shields.io/nuget/v/Metrika.Console?style=flat-square&logo=nuget&color=blue&label=Console" alt="NuGet Console">
   </a>
   <a href="https://www.nuget.org/packages/Metrika.Core/">
-    <img src="https://img.shields.io/nuget/dt/Metrika.Core?style=flat-square&color=004880" alt="Downloads">
+    <img src="https://img.shields.io/nuget/dt/Metrika.Core?style=flat-square&color=004880&label=Core%20Downloads" alt="Core Downloads">
   </a>
    <a href="https://www.nuget.org/packages/Metrika.Console/">
-    <img src="https://img.shields.io/nuget/dt/Metrika.Console?style=flat-square&color=004880" alt="Downloads">
+    <img src="https://img.shields.io/nuget/dt/Metrika.Console?style=flat-square&color=004880&label=Console%20Downloads" alt="Console Downloads">
   </a>
   <a href="https://github.com/alierguc1/Metrika/actions/workflows/build.yml">
     <img src="https://img.shields.io/github/actions/workflow/status/alierguc1/Metrika/build.yml?branch=master&style=flat-square&logo=github&label=build" alt="Build">
@@ -21,7 +21,7 @@
     <img src="https://img.shields.io/github/stars/alierguc1/Metrika?style=flat-square&logo=github" alt="Stars">
   </a>
   <a href="https://github.com/alierguc1/Metrika/blob/master/LICENSE">
-    <img src="https://img.shields.io/github/license/alierguc1/Metrika?style=flat-square" alt="MIT License">
+    <img src="https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square" alt="MIT License">
   </a>
 </p>
 
