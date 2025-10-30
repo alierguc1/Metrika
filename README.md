@@ -57,6 +57,7 @@
 - 📊 **Zero Dependencies** - Core library has no external dependencies
 - 🚀 **High Performance** - Minimal overhead on your application
 - 🔌 **Easy Integration** - Works with ILogger, Serilog, NLog, etc.
+- 🔧 **Multi-target Support** - Works with .NET 6.0, 7.0, 8.0, and 9.0
 
 ---
 
@@ -122,7 +123,7 @@ var metrics = new MetricsBuilder()
     .Build();
 ```
 
-#### **3. Beautiful Console Output**
+#### **3. Colorful Console Output**
 
 - **Metrika**: Color-coded output with 4 customizable themes
 - **BenchmarkDotNet**: Plain text tables (no colors)
@@ -160,7 +161,7 @@ dotnet add package Metrika.Console
 ### Manual Installation
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/Metrika.git
+git clone https://github.com/alierguc1/Metrika.git
 cd Metrika
 dotnet build
 ```
