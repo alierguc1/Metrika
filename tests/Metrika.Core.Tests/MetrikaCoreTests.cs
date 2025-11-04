@@ -988,5 +988,226 @@ namespace Metrika.Core.Tests
         }
 
         #endregion
+
+
+        #region IQueryable Extension Tests
+
+        [Fact]
+        public void ToListWithMetrika_WithSimpleQuery_ReturnsCorrectList()
+        {
+            // Arrange
+            var data = new List<int> { 1, 2, 3, 4, 5 };
+            var queryable = data.AsQueryable();
+
+            // Act
+            var result = queryable
+                .Where(x => x > 2)
+                .ToListWithMetrika("Simple Query", logger: _mockLogger.Object);
+
+            // Assert
+            Assert.Equal(3, result.Count);
+            Assert.Equal(new[] { 3, 4, 5 }, result);
+            _mockLogger.Verify(
+                x => x.Log(
+                    LogLevel.Information,
+                    It.IsAny<EventId>(),
+                    It.IsAny<It.IsAnyType>(),
+                    It.IsAny<Exception>(),
+                    It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+                Times.Once);
+        }
+
+        [Fact]
+        public void ToArrayWithMetrika_WithQuery_ReturnsCorrectArray()
+        {
+            // Arrange
+            var data = new List<string> { "a", "b", "c" };
+            var queryable = data.AsQueryable();
+
+            // Act
+            var result = queryable.ToArrayWithMetrika("Array Query");
+
+            // Assert
+            Assert.Equal(3, result.Length);
+            Assert.IsType<string[]>(result);
+        }
+
+        [Fact]
+        public void CountWithMetrika_WithQuery_ReturnsCorrectCount()
+        {
+            // Arrange
+            var data = Enumerable.Range(1, 100).ToList();
+            var queryable = data.AsQueryable();
+
+            // Act
+            var count = queryable
+                .Where(x => x % 2 == 0)
+                .CountWithMetrika("Count Even Numbers", logger: _mockLogger.Object);
+
+            // Assert
+            Assert.Equal(50, count);
+        }
+
+        [Fact]
+        public void FirstWithMetrika_WithQuery_ReturnsFirstElement()
+        {
+            // Arrange
+            var data = new List<int> { 10, 20, 30 };
+            var queryable = data.AsQueryable();
+
+            // Act
+            var first = queryable
+                .Where(x => x > 15)
+                .FirstWithMetrika("Get First > 15");
+
+            // Assert
+            Assert.Equal(20, first);
+        }
+
+        [Fact]
+        public void FirstOrDefaultWithMetrika_WithEmptyQuery_ReturnsDefault()
+        {
+            // Arrange
+            var data = new List<int> { 1, 2, 3 };
+            var queryable = data.AsQueryable();
+
+            // Act
+            var result = queryable
+                .Where(x => x > 100)
+                .FirstOrDefaultWithMetrika("Get First > 100");
+
+            // Assert
+            Assert.Equal(0, result);
+        }
+
+        [Fact]
+        public void AnyWithMetrika_WithMatchingQuery_ReturnsTrue()
+        {
+            // Arrange
+            var data = new List<int> { 1, 2, 3 };
+            var queryable = data.AsQueryable();
+
+            // Act
+            var hasEven = queryable
+                .Where(x => x % 2 == 0)
+                .AnyWithMetrika("Check Has Even Numbers");
+
+            // Assert
+            Assert.True(hasEven);
+        }
+
+        [Fact]
+        public void AnyWithMetrika_WithNonMatchingQuery_ReturnsFalse()
+        {
+            // Arrange
+            var data = new List<int> { 1, 3, 5 };
+            var queryable = data.AsQueryable();
+
+            // Act
+            var hasEven = queryable
+                .Where(x => x % 2 == 0)
+                .AnyWithMetrika("Check Has Even Numbers");
+
+            // Assert
+            Assert.False(hasEven);
+        }
+
+        [Fact]
+        public void ToListWithMetrika_WithMemoryTracking_LogsMemoryInfo()
+        {
+            // Arrange
+            var data = Enumerable.Range(1, 1000).ToList();
+            var queryable = data.AsQueryable();
+
+            // Act
+            var result = queryable
+                .Select(x => new string('x', 100))
+                .ToListWithMetrika("Memory Heavy Query", trackMemory: true, logger: _mockLogger.Object);
+
+            // Assert
+            Assert.Equal(1000, result.Count);
+            _mockLogger.Verify(
+                x => x.Log(
+                    It.IsAny<LogLevel>(),
+                    It.IsAny<EventId>(),
+                    It.Is<It.IsAnyType>((o, t) => o.ToString()!.Contains("Memory")),
+                    It.IsAny<Exception>(),
+                    It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+                Times.Once);
+        }
+
+        [Fact]
+        public void ToListWithMetrika_WithThresholdExceeded_LogsWarning()
+        {
+            // Arrange
+            var data = Enumerable.Range(1, 10000).ToList();
+            var queryable = data.AsQueryable();
+
+            // Act
+            var result = queryable
+                .Where(x => x % 2 == 0)
+                .Select(x => x * 2)
+                .OrderByDescending(x => x)
+                .ToListWithMetrika("Slow Query", thresholdMs: 1, logger: _mockLogger.Object);
+
+            // Assert
+            Assert.NotEmpty(result);
+            _mockLogger.Verify(
+                x => x.Log(
+                    LogLevel.Warning,
+                    It.IsAny<EventId>(),
+                    It.Is<It.IsAnyType>((o, t) => o.ToString()!.Contains("duration high")),
+                    It.IsAny<Exception>(),
+                    It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+                Times.Once);
+        }
+
+        [Fact]
+        public void IQueryableExtensions_WithAllParameters_Works()
+        {
+            // Arrange
+            var data = Enumerable.Range(1, 50).ToList();
+            var queryable = data.AsQueryable();
+
+            // Act
+            var result = queryable
+                .Where(x => x > 25)
+                .ToListWithMetrika(
+                    name: "Full Parameters Query",
+                    thresholdMs: 100,
+                    logger: _mockLogger.Object,
+                    localization: MetrikaLocalization.Turkish,
+                    timestampFormat: MetrikaTimestampFormat.ISO8601,
+                    trackMemory: true);
+
+            // Assert
+            Assert.Equal(25, result.Count);
+        }
+
+        [Fact]
+        public void IQueryableExtensions_WithComplexObjects_Works()
+        {
+            // Arrange
+            var data = new List<TestObject>
+    {
+        new TestObject { Id = 1, Name = "Test1" },
+        new TestObject { Id = 2, Name = "Test2" },
+        new TestObject { Id = 3, Name = "Test3" }
+    };
+            var queryable = data.AsQueryable();
+
+            // Act
+            var result = queryable
+                .Where(x => x.Id > 1)
+                .OrderBy(x => x.Name)
+                .ToListWithMetrika("Complex Object Query");
+
+            // Assert
+            Assert.Equal(2, result.Count);
+            Assert.Equal("Test2", result[0].Name);
+            Assert.Equal("Test3", result[1].Name);
+        }
+
+        #endregion
     }
 }
