@@ -1,6 +1,7 @@
 ﻿using Metrika.Console;
 using Metrika.Core;
 using Metrika.Core.Models;
+using Metrika.Sample.ConsoleApp.Helpers;
 
 class Program
 {
@@ -20,6 +21,7 @@ class Program
         Example6_DifferentLocalizations();
         Example7_TimestampFormats();
         await Example8_RealWorldScenario();
+        Example9_IQueryableExtensions();
 
         System.Console.WriteLine("\n=== All Examples Completed ===");
         System.Console.WriteLine("Press any key to exit...");
@@ -80,7 +82,59 @@ class Program
 
         System.Console.WriteLine();
     }
+    static void Example9_IQueryableExtensions()
+    {
+        System.Console.WriteLine("--- Example 9: IQueryable Extensions ---");
 
+        // Simulate large dataset
+        var users = new List<User>();
+        for (int i = 1; i <= 10000; i++)
+        {
+            users.Add(new User { Id = i, Name = $"User{i}", IsActive = i % 3 == 0 });
+        }
+
+        var queryable = users.AsQueryable();
+
+        // Test ToListWithMetrika
+        var activeUsers = queryable
+            .Where(u => u.IsActive)
+            .OrderBy(u => u.Name)
+            .ToListWithMetrika("Query Active Users", thresholdMs: 10, trackMemory: true);
+
+        System.Console.WriteLine($"  Active Users: {activeUsers.Count}");
+
+        // Test CountWithMetrika
+        var totalCount = queryable
+            .Where(u => u.Id > 5000)
+            .CountWithMetrika("Count Users > 5000", thresholdMs: 5);
+
+        System.Console.WriteLine($"  Count: {totalCount}");
+
+        // Test FirstWithMetrika
+        var firstUser = queryable
+            .Where(u => u.IsActive)
+            .OrderBy(u => u.Id)
+            .FirstWithMetrika("Get First Active User", thresholdMs: 5);
+
+        System.Console.WriteLine($"  First User: {firstUser.Name}");
+
+        // Test AnyWithMetrika
+        var hasInactiveUsers = queryable
+            .Where(u => !u.IsActive)
+            .AnyWithMetrika("Check Inactive Users Exist", thresholdMs: 5);
+
+        System.Console.WriteLine($"  Has Inactive Users: {hasInactiveUsers}");
+
+        // Complex query chain
+        var processed = queryable
+            .Where(u => u.IsActive)
+            .Select(u => new { u.Id, u.Name, Upper = u.Name.ToUpper() })
+            .OrderByDescending(u => u.Id)
+            .Take(100)
+            .ToListWithMetrika("Complex Query Chain", thresholdMs: 20, trackMemory: true);
+
+        System.Console.WriteLine($"  Processed: {processed.Count}\n");
+    }
     static void Example3_ThresholdWarnings()
     {
         System.Console.WriteLine("--- Example 3: Threshold Warnings ---");
@@ -234,20 +288,5 @@ class Program
         System.Console.WriteLine($"  Total Users: {users.Count}");
         System.Console.WriteLine($"  Active Users: {activeUsers.Count}");
         System.Console.WriteLine($"  Processed: {processed.Count}\n");
-    }
-
-    // Helper classes
-    class User
-    {
-        public int Id { get; set; }
-        public string Name { get; set; } = string.Empty;
-        public bool IsActive { get; set; }
-    }
-
-    class ProcessedUser
-    {
-        public int Id { get; set; }
-        public string Name { get; set; } = string.Empty;
-        public DateTime ProcessedAt { get; set; }
     }
 }
