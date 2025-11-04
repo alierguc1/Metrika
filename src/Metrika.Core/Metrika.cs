@@ -375,5 +375,161 @@ namespace Metrika.Core
         }
 
         #endregion
+
+        #region IQueryable Extensions
+
+        /// <summary>
+        /// Measures the execution time and optional memory usage of ToList() operation on IQueryable.
+        /// This extension allows performance tracking of LINQ query materialization.
+        /// </summary>
+        /// <typeparam name="T">The element type of the queryable sequence.</typeparam>
+        /// <param name="queryable">The IQueryable to materialize and measure.</param>
+        /// <param name="name">A descriptive name for the measured operation.</param>
+        /// <param name="thresholdMs">Optional threshold for marking long-running queries.</param>
+        /// <param name="logger">Optional logger instance for structured metric output.</param>
+        /// <param name="localization">Optional localization override for this measurement.</param>
+        /// <param name="timestampFormat">Optional timestamp format override for this measurement.</param>
+        /// <param name="trackMemory">Optional flag to enable or disable memory tracking for this call.</param>
+        /// <returns>A materialized List containing all elements from the queryable.</returns>
+        public static List<T> ToListWithMetrika<T>(
+            this IQueryable<T> queryable,
+            string name,
+            int thresholdMs = 0,
+            ILogger? logger = null,
+            MetrikaLocalization? localization = null,
+            MetrikaTimestampFormat? timestampFormat = null,
+            bool? trackMemory = null)
+        {
+            return new Func<List<T>>(() => queryable.ToList())
+                .Metrika(name, thresholdMs, logger, localization, timestampFormat, trackMemory);
+        }
+
+        /// <summary>
+        /// Measures the execution time and optional memory usage of ToArray() operation on IQueryable.
+        /// </summary>
+        /// <typeparam name="T">The element type of the queryable sequence.</typeparam>
+        /// <param name="queryable">The IQueryable to materialize and measure.</param>
+        /// <param name="name">A descriptive name for the measured operation.</param>
+        /// <param name="thresholdMs">Optional threshold for marking long-running queries.</param>
+        /// <param name="logger">Optional logger instance for structured metric output.</param>
+        /// <param name="localization">Optional localization override for this measurement.</param>
+        /// <param name="timestampFormat">Optional timestamp format override for this measurement.</param>
+        /// <param name="trackMemory">Optional flag to enable or disable memory tracking for this call.</param>
+        /// <returns>A materialized array containing all elements from the queryable.</returns>
+        public static T[] ToArrayWithMetrika<T>(
+            this IQueryable<T> queryable,
+            string name,
+            int thresholdMs = 0,
+            ILogger? logger = null,
+            MetrikaLocalization? localization = null,
+            MetrikaTimestampFormat? timestampFormat = null,
+            bool? trackMemory = null)
+        {
+            return new Func<T[]>(() => queryable.ToArray())
+                .Metrika(name, thresholdMs, logger, localization, timestampFormat, trackMemory);
+        }
+
+        /// <summary>
+        /// Measures the execution time and optional memory usage of First() operation on IQueryable.
+        /// </summary>
+        /// <typeparam name="T">The element type of the queryable sequence.</typeparam>
+        /// <param name="queryable">The IQueryable to execute First() on.</param>
+        /// <param name="name">A descriptive name for the measured operation.</param>
+        /// <param name="thresholdMs">Optional threshold for marking long-running queries.</param>
+        /// <param name="logger">Optional logger instance for structured metric output.</param>
+        /// <param name="localization">Optional localization override for this measurement.</param>
+        /// <param name="timestampFormat">Optional timestamp format override for this measurement.</param>
+        /// <param name="trackMemory">Optional flag to enable or disable memory tracking for this call.</param>
+        /// <returns>The first element from the queryable.</returns>
+        public static T FirstWithMetrika<T>(
+            this IQueryable<T> queryable,
+            string name,
+            int thresholdMs = 0,
+            ILogger? logger = null,
+            MetrikaLocalization? localization = null,
+            MetrikaTimestampFormat? timestampFormat = null,
+            bool? trackMemory = null)
+        {
+            return new Func<T>(() => queryable.First())
+                .Metrika(name, thresholdMs, logger, localization, timestampFormat, trackMemory);
+        }
+
+        /// <summary>
+        /// Measures the execution time and optional memory usage of FirstOrDefault() operation on IQueryable.
+        /// </summary>
+        /// <typeparam name="T">The element type of the queryable sequence.</typeparam>
+        /// <param name="queryable">The IQueryable to execute FirstOrDefault() on.</param>
+        /// <param name="name">A descriptive name for the measured operation.</param>
+        /// <param name="thresholdMs">Optional threshold for marking long-running queries.</param>
+        /// <param name="logger">Optional logger instance for structured metric output.</param>
+        /// <param name="localization">Optional localization override for this measurement.</param>
+        /// <param name="timestampFormat">Optional timestamp format override for this measurement.</param>
+        /// <param name="trackMemory">Optional flag to enable or disable memory tracking for this call.</param>
+        /// <returns>The first element or default value from the queryable.</returns>
+        public static T? FirstOrDefaultWithMetrika<T>(
+            this IQueryable<T> queryable,
+            string name,
+            int thresholdMs = 0,
+            ILogger? logger = null,
+            MetrikaLocalization? localization = null,
+            MetrikaTimestampFormat? timestampFormat = null,
+            bool? trackMemory = null)
+        {
+            return new Func<T?>(() => queryable.FirstOrDefault())
+                .Metrika(name, thresholdMs, logger, localization, timestampFormat, trackMemory);
+        }
+
+        /// <summary>
+        /// Measures the execution time and optional memory usage of Count() operation on IQueryable.
+        /// </summary>
+        /// <typeparam name="T">The element type of the queryable sequence.</typeparam>
+        /// <param name="queryable">The IQueryable to count.</param>
+        /// <param name="name">A descriptive name for the measured operation.</param>
+        /// <param name="thresholdMs">Optional threshold for marking long-running queries.</param>
+        /// <param name="logger">Optional logger instance for structured metric output.</param>
+        /// <param name="localization">Optional localization override for this measurement.</param>
+        /// <param name="timestampFormat">Optional timestamp format override for this measurement.</param>
+        /// <param name="trackMemory">Optional flag to enable or disable memory tracking for this call.</param>
+        /// <returns>The count of elements in the queryable.</returns>
+        public static int CountWithMetrika<T>(
+            this IQueryable<T> queryable,
+            string name,
+            int thresholdMs = 0,
+            ILogger? logger = null,
+            MetrikaLocalization? localization = null,
+            MetrikaTimestampFormat? timestampFormat = null,
+            bool? trackMemory = null)
+        {
+            return new Func<int>(() => queryable.Count())
+                .Metrika(name, thresholdMs, logger, localization, timestampFormat, trackMemory);
+        }
+
+        /// <summary>
+        /// Measures the execution time and optional memory usage of Any() operation on IQueryable.
+        /// </summary>
+        /// <typeparam name="T">The element type of the queryable sequence.</typeparam>
+        /// <param name="queryable">The IQueryable to check.</param>
+        /// <param name="name">A descriptive name for the measured operation.</param>
+        /// <param name="thresholdMs">Optional threshold for marking long-running queries.</param>
+        /// <param name="logger">Optional logger instance for structured metric output.</param>
+        /// <param name="localization">Optional localization override for this measurement.</param>
+        /// <param name="timestampFormat">Optional timestamp format override for this measurement.</param>
+        /// <param name="trackMemory">Optional flag to enable or disable memory tracking for this call.</param>
+        /// <returns>True if the queryable contains any elements, otherwise false.</returns>
+        public static bool AnyWithMetrika<T>(
+            this IQueryable<T> queryable,
+            string name,
+            int thresholdMs = 0,
+            ILogger? logger = null,
+            MetrikaLocalization? localization = null,
+            MetrikaTimestampFormat? timestampFormat = null,
+            bool? trackMemory = null)
+        {
+            return new Func<bool>(() => queryable.Any())
+                .Metrika(name, thresholdMs, logger, localization, timestampFormat, trackMemory);
+        }
+
+        #endregion
+
     }
 }
