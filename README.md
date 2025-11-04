@@ -58,6 +58,7 @@
 - 🚀 **High Performance** - Minimal overhead on your application
 - 🔌 **Easy Integration** - Works with ILogger, Serilog, NLog, etc.
 - 🔧 **Multi-target Support** - Works with .NET 6.0, 7.0, 8.0, and 9.0
+- 🔍 **IQueryable Extensions** - Measure LINQ query performance directly
 
 ---
 
@@ -381,6 +382,24 @@ await SendEmailAsync(email)
     .MetrikaAsync("Send Email", thresholdMs: 2000);
 ```
 
+### 4. Measure LINQ Queries (⭐ NEW in v1.2.0)
+```csharp
+// Measure database queries directly
+var activeUsers = queryable
+    .Where(x => x.IsActive)
+    .OrderBy(x => x.Name)
+    .ToListWithMetrika("Get Active Users", thresholdMs: 500, trackMemory: true);
+
+// Measure count operations
+var userCount = queryable
+    .Where(x => x.IsActive)
+    .CountWithMetrika("Count Active Users", thresholdMs: 100);
+
+// Measure existence checks (fastest!)
+var hasUsers = queryable
+    .Where(x => x.IsActive)
+    .AnyWithMetrika("Check Active Users Exist", thresholdMs: 50);
+```
 ---
 
 ## 📚 Documentation
@@ -433,6 +452,76 @@ var users = await _dbContext.Users
 var response = await _httpClient
     .GetAsync("https://api.example.com/data")
     .MetrikaAsync("External API Call", thresholdMs: 2000);
+```
+
+
+#### IQueryable Extensions (⭐ NEW in v1.2.0)
+
+Measure LINQ query materialization performance directly:
+```csharp
+// ToList - Most common operation
+var data = queryable
+    .Where(x => x.DeviceId == deviceId && x.ReadDateTime >= startDate)
+    .OrderBy(x => x.ReadDateTime)
+    .ToListWithMetrika("Device Data Query", thresholdMs: 200, trackMemory: true);
+// Output: ⏱️ Device Data Query duration: 145 ms | Memory: +2.3 MB | GC: Gen0: 1
+
+// Count - Check record count
+var totalProducts = queryable
+    .Where(x => x.IsActive && x.Stock > 0)
+    .CountWithMetrika("Count Active Products", thresholdMs: 100);
+// Output: ⏱️ Count Active Products duration: 25 ms
+
+// Any - Fastest existence check
+var hasItems = queryable
+    .Where(x => x.UserId == userId)
+    .AnyWithMetrika("Check Cart Items Exist", thresholdMs: 50);
+// Output: ⏱️ Check Cart Items Exist duration: 3 ms
+
+// First - Get single record
+var lastOrder = queryable
+    .Where(x => x.UserId == userId)
+    .OrderByDescending(x => x.CreatedDate)
+    .FirstWithMetrika("Get Last Order", thresholdMs: 50);
+
+// FirstOrDefault - Safe single record
+var subscription = queryable
+    .Where(x => x.UserId == userId && x.IsActive)
+    .FirstOrDefaultWithMetrika("Check User Subscription", thresholdMs: 100);
+
+// ToArray - Get array instead of list
+var monthNames = queryable
+    .Select(x => x.MonthName)
+    .Distinct()
+    .OrderBy(x => x)
+    .ToArrayWithMetrika("Get Month Names", thresholdMs: 100);
+```
+
+**Why use IQueryable extensions?**
+
+✅ **Measures actual database query execution time**  
+✅ **Tracks SQL generation and data loading**  
+✅ **Detects N+1 query problems**  
+✅ **Identifies missing indexes**  
+✅ **Memory usage during materialization**
+
+**Performance Comparison:**
+```csharp
+// ❌ Slow - Loads everything then filters in memory
+var data = queryable.ToList().Where(x => x.IsActive).ToList();
+// ⚠️ 2100ms, 45 MB memory
+
+// ✅ Fast - Filters in database
+var data = queryable
+    .Where(x => x.IsActive)
+    .ToListWithMetrika("Filtered Query", trackMemory: true);
+// ⏱️ 280ms, 8 MB memory
+
+// ⚡ Fastest - Only checks existence
+var exists = queryable
+    .Where(x => x.IsActive)
+    .AnyWithMetrika("Check Exists");
+// ⏱️ 3ms
 ```
 
 ---
@@ -660,8 +749,14 @@ public async Task<ProcessResult> ProcessOrderAsync(int orderId)
 [METRIKA] [14:30:45] [INFO] Calculate Total duration: 2 ms | Memory: +0.05 MB | GC: Gen0: 0, Gen1: 0, Gen2: 0
 [METRIKA] [14:30:46] [INFO] Update Inventory duration: 320 ms
 [METRIKA] [14:30:48] [INFO] Send Notification duration: 1850 ms
+[METRIKA] [14:30:45] [INFO] Check Device Data Exists duration: 3 ms
+[METRIKA] [14:30:45] [INFO] Count Device Data duration: 28 ms
+[METRIKA] [14:30:45] [INFO] Fetch Device Data duration: 245 ms | Memory: +15.32 MB | GC: Gen0: 3, Gen1: 1, Gen2: 0
 ```
-
+**Benefits:**
+- ✅ Detected slow query (245ms, needs index)
+- ✅ Identified memory usage (15MB for this dataset)
+- ✅ Found 3 Gen0 GC collections (optimization opportunity)
 ---
 
 ### Example 3: Background Job with Memory Tracking
@@ -745,6 +840,51 @@ new Func<int>(() => Calculate()).Metrika("計算", thresholdMs: 50);
 
 ---
 
+### Example 6: Real-World Database Query Optimization
+```csharp
+public class DeviceDataService
+{
+    private readonly IRepository _repository;
+
+    public async Task<List> GetDeviceDataAsync(
+        int deviceId, 
+        DateTime startDate, 
+        DateTime endDate)
+    {
+        var queryable = await _repository.GetQueryableAsync();
+
+        // Step 1: Check if any data exists (fastest check)
+        var hasData = queryable
+            .Where(x => x.DeviceId == deviceId)
+            .AnyWithMetrika("Check Device Data Exists", thresholdMs: 50);
+
+        if (!hasData)
+        {
+            return new List();
+        }
+
+        // Step 2: Get total count for pagination
+        var totalCount = queryable
+            .Where(x => x.DeviceId == deviceId && 
+                       x.ReadDateTime >= startDate && 
+                       x.ReadDateTime < endDate)
+            .CountWithMetrika("Count Device Data", thresholdMs: 100);
+
+        // Step 3: Fetch actual data
+        var data = queryable
+            .Where(x => x.DeviceId == deviceId && 
+                       x.ReadDateTime >= startDate && 
+                       x.ReadDateTime < endDate)
+            .OrderBy(x => x.ReadDateTime)
+            .ToListWithMetrika("Fetch Device Data", 
+                thresholdMs: 500, 
+                trackMemory: true);
+
+        return data;
+    }
+}
+```
+---
 ## 🏗️ Project Structure
 
 ```
