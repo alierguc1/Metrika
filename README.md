@@ -58,9 +58,226 @@
 - 🚀 **High Performance** - Minimal overhead on your application
 - 🔌 **Easy Integration** - Works with ILogger, Serilog, NLog, etc.
 - 🔧 **Multi-target Support** - Works with .NET 6.0, 7.0, 8.0, and 9.0
-- 🔍 **IQueryable Extensions** - Measure LINQ query performance directly
+- 🔍 **IQueryable Extensions** - Measure LINQ query performance
+  - ToList, ToArray, First, FirstOrDefault
+  - **Single, SingleOrDefault** (v1.3.0+) - For unique element queries
+  - **Last, LastOrDefault** (v1.3.0+) - For ordered sequence queries
+  - Count, **LongCount** (v1.3.0+) - For large datasets
+  - Any
+- ⚡ **Zero Overhead** - Minimal performance impact
 
 ---
+
+## 📊 IQueryable Extensions Guide
+
+Metrika provides powerful extension methods for measuring LINQ query performance in real-time. Available in **v1.3.0+**.
+
+### 🎯 Available Methods
+
+| Method | Use Case | Return Type | Throws if Empty | Throws if Multiple |
+|--------|----------|-------------|-----------------|-------------------|
+| `ToList` | Materialize query to list | `List<T>` | ❌ No | ❌ No |
+| `ToArray` | Materialize query to array | `T[]` | ❌ No | ❌ No |
+| `First` | Get first element | `T` | ✅ Yes | ❌ No |
+| `FirstOrDefault` | Get first or null | `T?` | ❌ No (null) | ❌ No |
+| **`Single`** ⭐ | **Exactly 1 expected** | `T` | ✅ Yes | ✅ Yes |
+| **`SingleOrDefault`** ⭐ | **0 or 1 expected** | `T?` | ❌ No (null) | ✅ Yes |
+| **`Last`** ⭐ | **Get last (ordered)** | `T` | ✅ Yes | ❌ No |
+| **`LastOrDefault`** ⭐ | **Get last or null (ordered)** | `T?` | ❌ No (null) | ❌ No |
+| `Count` | Count elements | `int` | ❌ No (0) | ❌ No |
+| **`LongCount`** ⭐ | **Count large datasets** | `long` | ❌ No (0) | ❌ No |
+| `Any` | Check existence | `bool` | ❌ No (false) | ❌ No |
+
+⭐ = **New in v1.3.0**
+
+---
+
+### 💡 When to Use Each Method
+
+#### Single vs First vs Last
+```csharp
+// ✅ Use Single - When you expect EXACTLY one result (ID lookup)
+var user = users
+    .Where(u => u.Id == userId)
+    .SingleWithMetrika("Get User By ID", thresholdMs: 50);
+// Throws if: 0 results OR multiple results
+
+// ✅ Use SingleOrDefault - When 0 or 1 expected (email search)
+var user = users
+    .Where(u => u.Email == email)
+    .SingleOrDefaultWithMetrika("Find User By Email", thresholdMs: 100);
+// Returns null if not found, throws if multiple results
+
+// ✅ Use First - When you want the first match (any amount)
+var latestPost = posts
+    .OrderByDescending(p => p.CreatedDate)
+    .FirstWithMetrika("Get Latest Post", thresholdMs: 50);
+// Works with 1 or many results
+
+// ✅ Use Last - When you want the last match (ordered query)
+var oldestOrder = orders
+    .OrderBy(o => o.CreatedDate)
+    .LastWithMetrika("Get Oldest Order", thresholdMs: 100);
+// Works with 1 or many results
+```
+
+---
+
+#### Count vs LongCount
+```csharp
+// ✅ Use Count - For standard datasets (<2.1 billion records)
+var userCount = users
+    .Where(u => u.IsActive)
+    .CountWithMetrika("Count Active Users", thresholdMs: 200);
+// Returns: int (max 2,147,483,647)
+
+// ✅ Use LongCount - For very large datasets (>2 billion records)
+var totalTransactions = transactions
+    .LongCountWithMetrika("Count All Transactions", thresholdMs: 5000);
+// Returns: long (max 9,223,372,036,854,775,807)
+```
+
+**When to use LongCount:**
+- ✅ Big data / data warehouse tables
+- ✅ Historical transaction logs
+- ✅ Time-series data over many years
+- ✅ Event logging tables
+
+---
+
+### 🔥 Real-World Examples
+
+#### Example 1: User Authentication
+```csharp
+public User? AuthenticateUser(string email, string password)
+{
+    // Use SingleOrDefault - email should be unique, but might not exist
+    var user = _context.Users
+        .Where(u => u.Email == email)
+        .SingleOrDefaultWithMetrika("Authenticate User", thresholdMs: 50);
+    
+    return user?.VerifyPassword(password) == true ? user : null;
+}
+```
+
+#### Example 2: Dashboard Statistics
+```csharp
+public DashboardStats GetDashboardStats()
+{
+    // Use Last - Get most recent order
+    var latestOrder = _context.Orders
+        .OrderBy(o => o.CreatedDate)
+        .LastOrDefaultWithMetrika("Get Latest Order", thresholdMs: 100);
+    
+    // Use LongCount - Large historical data
+    var totalUsers = _context.Users
+        .LongCountWithMetrika("Count Total Users", thresholdMs: 200);
+    
+    return new DashboardStats 
+    { 
+        LatestOrder = latestOrder,
+        TotalUsers = totalUsers 
+    };
+}
+```
+
+#### Example 3: Order Processing
+```csharp
+public async Task ProcessOrderAsync(int orderId)
+{
+    // Use Single - Order ID is primary key (must exist and be unique)
+    var order = await _context.Orders
+        .Where(o => o.Id == orderId)
+        .SingleAsync()
+        .MetrikaAsync("Get Order By ID", thresholdMs: 50);
+    
+    // Use Last - Get latest status update
+    var lastStatus = _context.OrderStatusHistory
+        .Where(s => s.OrderId == orderId)
+        .OrderBy(s => s.UpdatedAt)
+        .LastWithMetrika("Get Latest Status", thresholdMs: 50);
+    
+    // Process order...
+}
+```
+
+#### Example 4: Analytics Query
+```csharp
+public AnalyticsReport GenerateReport(DateTime startDate, DateTime endDate)
+{
+    // Use LongCount - Potentially billions of records
+    var totalEvents = _context.AnalyticsEvents
+        .Where(e => e.Timestamp >= startDate && e.Timestamp < endDate)
+        .LongCountWithMetrika("Count Analytics Events", 
+            thresholdMs: 10000,
+            trackMemory: true);
+    
+    // Output: [METRIKA] Count Analytics Events duration: 8,247 ms | Memory: +15.3 MB
+    
+    return new AnalyticsReport { TotalEvents = totalEvents };
+}
+```
+
+---
+
+### ⚠️ Common Mistakes
+```csharp
+// ❌ BAD: Using Single when multiple results expected
+var posts = _context.Posts
+    .Where(p => p.AuthorId == authorId)
+    .SingleWithMetrika("Get Posts"); // THROWS! Multiple results
+
+// ✅ GOOD: Use First or ToList
+var post = _context.Posts
+    .Where(p => p.AuthorId == authorId)
+    .FirstWithMetrika("Get Latest Post");
+
+// ❌ BAD: Using First when you need exactly one
+var user = _context.Users
+    .Where(u => u.Id == userId)
+    .FirstWithMetrika("Get User"); // Works, but doesn't validate uniqueness
+
+// ✅ GOOD: Use Single for ID lookups
+var user = _context.Users
+    .Where(u => u.Id == userId)
+    .SingleWithMetrika("Get User"); // Validates exactly one result
+
+// ❌ BAD: Using Count on huge tables
+var count = _context.BigDataTable
+    .CountWithMetrika("Count Records"); // May overflow! (>2B records)
+
+// ✅ GOOD: Use LongCount for large datasets
+var count = _context.BigDataTable
+    .LongCountWithMetrika("Count Records"); // Safe for >2B records
+```
+
+---
+
+### 🎯 Performance Tips
+```csharp
+// ✅ TIP 1: Use Any() to check existence (fastest!)
+var exists = _context.Users
+    .Where(u => u.Email == email)
+    .AnyWithMetrika("Check Email Exists", thresholdMs: 10);
+// 3ms - Only checks if records exist
+
+// ❌ Don't use Count() for existence checks
+var count = _context.Users
+    .Where(u => u.Email == email)
+    .CountWithMetrika("Count Users"); // 45ms - Counts all matches
+
+// ✅ TIP 2: Use Last instead of OrderByDescending + First
+var latest = orders
+    .OrderBy(o => o.Date)
+    .LastWithMetrika("Get Latest"); // More semantic
+
+// ✅ TIP 3: Add indexes for Single/Last queries
+// Single queries on indexed columns are blazing fast
+var user = _context.Users
+    .Where(u => u.Id == userId) // Primary key (indexed)
+    .SingleWithMetrika("Get User", thresholdMs: 5); // <5ms
+```
+
 
 ## 🆚 Why Metrika?
 
@@ -963,6 +1180,47 @@ If you find this project helpful, please give it a ⭐️ on GitHub!
 - Email: alierguc1@gmail.com
 
 ---
+
+## 📋 Version History
+
+### v1.3.1 (Planned)
+- 📝 Documentation improvements
+- 📚 Enhanced examples and guides
+
+### v1.3.0 (Current - November 2024)
+- ✨ **New:** `SingleWithMetrika` - For queries expecting exactly one result
+- ✨ **New:** `SingleOrDefaultWithMetrika` - For 0 or 1 expected results
+- ✨ **New:** `LastWithMetrika` - Get last element from ordered queries
+- ✨ **New:** `LastOrDefaultWithMetrika` - Get last element or null
+- ✨ **New:** `LongCountWithMetrika` - Count large datasets (>2 billion records)
+- 🧪 Comprehensive unit test coverage for new methods
+- 📝 Enhanced XML documentation with detailed examples
+- 📊 Real-world usage examples added
+
+**Use Cases:**
+- ID-based lookups with `Single`
+- Email/username searches with `SingleOrDefault`
+- Latest record queries with `Last`
+- Big data counting with `LongCount`
+
+### v1.2.0 (October 2024)
+- ✨ Initial IQueryable extensions: `ToList`, `ToArray`, `First`, `FirstOrDefault`, `Count`, `Any`
+- 🎨 Console logger with 4 customizable color schemes
+- 📊 Memory tracking support with GC collection metrics
+- 🌍 Multi-language localization (10+ languages)
+- ⏰ Threshold-based warnings
+- 🔧 Custom timestamp formats
+
+### v1.0.0 (September 2024)
+- 🎉 Initial release
+- ⏱️ Basic performance measurement for sync/async operations
+- 🔧 Fluent API design
+- 📊 Custom logger support
+- 🌍 English and Turkish localization
+---
+
+
+
 
 ## 🎯 Roadmap
 
