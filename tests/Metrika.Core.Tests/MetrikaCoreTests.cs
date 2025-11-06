@@ -1208,6 +1208,314 @@ namespace Metrika.Core.Tests
             Assert.Equal("Test3", result[1].Name);
         }
 
+
+        [Fact]
+        public void SingleWithMetrika_WithUniqueElement_ReturnsSingleElement()
+        {
+            // Arrange
+            var data = new List<int> { 1, 2, 3, 4, 5 };
+            var queryable = data.AsQueryable();
+
+            // Act
+            var result = queryable
+                .Where(x => x == 3)
+                .SingleWithMetrika("Get Single Element", logger: _mockLogger.Object);
+
+            // Assert
+            Assert.Equal(3, result);
+            _mockLogger.Verify(
+                x => x.Log(
+                    LogLevel.Information,
+                    It.IsAny<EventId>(),
+                    It.IsAny<It.IsAnyType>(),
+                    It.IsAny<Exception>(),
+                    It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+                Times.Once);
+        }
+
+        [Fact]
+        public void SingleWithMetrika_WithMultipleElements_ThrowsException()
+        {
+            // Arrange
+            var data = new List<int> { 1, 2, 3, 4, 5 };
+            var queryable = data.AsQueryable();
+
+            // Act & Assert
+            Assert.Throws<InvalidOperationException>(() =>
+                queryable
+                    .Where(x => x > 2) // Returns 3, 4, 5
+                    .SingleWithMetrika("Get Single from Multiple"));
+        }
+
+        [Fact]
+        public void SingleWithMetrika_WithNoElements_ThrowsException()
+        {
+            // Arrange
+            var data = new List<int> { 1, 2, 3 };
+            var queryable = data.AsQueryable();
+
+            // Act & Assert
+            Assert.Throws<InvalidOperationException>(() =>
+                queryable
+                    .Where(x => x > 100)
+                    .SingleWithMetrika("Get Non-Existent Element"));
+        }
+
+        [Fact]
+        public void SingleOrDefaultWithMetrika_WithNoElements_ReturnsDefault()
+        {
+            // Arrange
+            var data = new List<int> { 1, 2, 3 };
+            var queryable = data.AsQueryable();
+
+            // Act
+            var result = queryable
+                .Where(x => x > 100)
+                .SingleOrDefaultWithMetrika("Get Non-Existent Element");
+
+            // Assert
+            Assert.Equal(0, result); // default(int) = 0
+        }
+
+        [Fact]
+        public void SingleOrDefaultWithMetrika_WithUniqueElement_ReturnsElement()
+        {
+            // Arrange
+            var data = new List<string> { "apple", "banana", "cherry" };
+            var queryable = data.AsQueryable();
+
+            // Act
+            var result = queryable
+                .Where(x => x.StartsWith("b"))
+                .SingleOrDefaultWithMetrika("Get Banana");
+
+            // Assert
+            Assert.Equal("banana", result);
+        }
+
+        [Fact]
+        public void SingleOrDefaultWithMetrika_WithMultipleElements_ThrowsException()
+        {
+            // Arrange
+            var data = new List<int> { 1, 2, 3, 4 };
+            var queryable = data.AsQueryable();
+
+            // Act & Assert
+            Assert.Throws<InvalidOperationException>(() =>
+                queryable
+                    .Where(x => x > 1) // Returns 2, 3, 4
+                    .SingleOrDefaultWithMetrika("Get Single from Multiple"));
+        }
+
+        [Fact]
+        public void LastWithMetrika_WithOrderedQuery_ReturnsLastElement()
+        {
+            // Arrange
+            var data = new List<int> { 10, 20, 30, 40, 50 };
+            var queryable = data.AsQueryable();
+
+            // Act
+            var result = queryable
+                .Where(x => x > 15)
+                .OrderBy(x => x)
+                .LastWithMetrika("Get Last Element", logger: _mockLogger.Object);
+
+            // Assert
+            Assert.Equal(50, result);
+        }
+
+        [Fact]
+        public void LastWithMetrika_WithEmptyQuery_ThrowsException()
+        {
+            // Arrange
+            var data = new List<int> { 1, 2, 3 };
+            var queryable = data.AsQueryable();
+
+            // Act & Assert
+            Assert.Throws<InvalidOperationException>(() =>
+                queryable
+                    .Where(x => x > 100)
+                    .LastWithMetrika("Get Last from Empty"));
+        }
+
+        [Fact]
+        public void LastOrDefaultWithMetrika_WithElements_ReturnsLastElement()
+        {
+            // Arrange
+            var data = new List<string> { "first", "second", "third" };
+            var queryable = data.AsQueryable();
+
+            // Act
+            var result = queryable
+                .OrderBy(x => x)
+                .LastOrDefaultWithMetrika("Get Last String");
+
+            // Assert
+            Assert.Equal("third", result);
+        }
+
+        [Fact]
+        public void LastOrDefaultWithMetrika_WithNoElements_ReturnsNull()
+        {
+            // Arrange
+            var data = new List<string> { "a", "b", "c" };
+            var queryable = data.AsQueryable();
+
+            // Act
+            var result = queryable
+                .Where(x => x.StartsWith("z"))
+                .LastOrDefaultWithMetrika("Get Last Starting with Z");
+
+            // Assert
+            Assert.Null(result);
+        }
+
+        [Fact]
+        public void LongCountWithMetrika_WithLargeDataset_ReturnsLongCount()
+        {
+            // Arrange
+            var data = Enumerable.Range(1, 10000).ToList();
+            var queryable = data.AsQueryable();
+
+            // Act
+            var count = queryable
+                .Where(x => x % 2 == 0)
+                .LongCountWithMetrika("Count Even Numbers", logger: _mockLogger.Object);
+
+            // Assert
+            Assert.Equal(5000L, count);
+            Assert.IsType<long>(count);
+        }
+
+        [Fact]
+        public void LongCountWithMetrika_WithEmptyQuery_ReturnsZero()
+        {
+            // Arrange
+            var data = new List<int> { 1, 3, 5, 7 };
+            var queryable = data.AsQueryable();
+
+            // Act
+            var count = queryable
+                .Where(x => x % 2 == 0)
+                .LongCountWithMetrika("Count Even in Odd List");
+
+            // Assert
+            Assert.Equal(0L, count);
+        }
+
+        [Fact]
+        public void SingleWithMetrika_WithMemoryTracking_LogsMemoryInfo()
+        {
+            // Arrange
+            var data = Enumerable.Range(1, 100).Select(i => new TestObject
+            {
+                Id = i,
+                Name = $"Object{i}"
+            }).ToList();
+            var queryable = data.AsQueryable();
+
+            // Act
+            var result = queryable
+                .Where(x => x.Id == 50)
+                .SingleWithMetrika("Get Object 50", trackMemory: true, logger: _mockLogger.Object);
+
+            // Assert
+            Assert.Equal(50, result.Id);
+            _mockLogger.Verify(
+                x => x.Log(
+                    It.IsAny<LogLevel>(),
+                    It.IsAny<EventId>(),
+                    It.Is<It.IsAnyType>((o, t) => o.ToString()!.Contains("Memory")),
+                    It.IsAny<Exception>(),
+                    It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+                Times.Once);
+        }
+
+        [Fact]
+        public void LastWithMetrika_WithThresholdExceeded_LogsWarning()
+        {
+            // Arrange
+            var data = Enumerable.Range(1, 5000).ToList();
+            var queryable = data.AsQueryable();
+
+            // Act
+            var result = queryable
+                .Where(x => x % 2 == 0)
+                .OrderBy(x => x)
+                .LastWithMetrika("Get Last Even", thresholdMs: 1, logger: _mockLogger.Object);
+
+            // Assert
+            Assert.Equal(5000, result);
+            _mockLogger.Verify(
+                x => x.Log(
+                    LogLevel.Warning,
+                    It.IsAny<EventId>(),
+                    It.Is<It.IsAnyType>((o, t) => o.ToString()!.Contains("duration high")),
+                    It.IsAny<Exception>(),
+                    It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+                Times.Once);
+        }
+
+        [Fact]
+        public void LongCountWithMetrika_WithThreshold_CompletesSuccessfully()
+        {
+            // Arrange
+            var data = Enumerable.Range(1, 1000).ToList();
+            var queryable = data.AsQueryable();
+
+            // Act
+            var count = queryable
+                .Where(x => x > 500)
+                .LongCountWithMetrika("Count > 500", thresholdMs: 100, logger: _mockLogger.Object);
+
+            // Assert
+            Assert.Equal(500L, count);
+        }
+
+        [Fact]
+        public void NewExtensions_WithAllParametersOptional_Works()
+        {
+            // Arrange
+            var data = new List<int> { 1, 2, 3, 4, 5 };
+            var queryable = data.AsQueryable();
+
+            // Act - Test all parameter combinations
+            var single = queryable.Where(x => x == 3).SingleWithMetrika("Single Test");
+            var singleOrDefault = queryable.Where(x => x == 999).SingleOrDefaultWithMetrika("SingleOrDefault Test");
+            var last = queryable.OrderBy(x => x).LastWithMetrika("Last Test");
+            var lastOrDefault = queryable.Where(x => x > 100).LastOrDefaultWithMetrika("LastOrDefault Test");
+            var longCount = queryable.LongCountWithMetrika("LongCount Test");
+
+            // Assert
+            Assert.Equal(3, single);
+            Assert.Equal(0, singleOrDefault);
+            Assert.Equal(5, last);
+            Assert.Equal(0, lastOrDefault);
+            Assert.Equal(5L, longCount);
+        }
+
+        [Fact]
+        public void NewExtensions_WithComplexObjects_WorksCorrectly()
+        {
+            // Arrange
+            var data = new List<TestObject>
+    {
+        new TestObject { Id = 1, Name = "First" },
+        new TestObject { Id = 2, Name = "Second" },
+        new TestObject { Id = 3, Name = "Third" }
+    };
+            var queryable = data.AsQueryable();
+
+            // Act
+            var single = queryable.Where(x => x.Id == 2).SingleWithMetrika("Get Second");
+            var last = queryable.OrderBy(x => x.Name).LastWithMetrika("Get Last by Name");
+            var count = queryable.Where(x => x.Id > 1).LongCountWithMetrika("Count > 1");
+
+            // Assert
+            Assert.Equal("Second", single.Name);
+            Assert.Equal("Third", last.Name);
+            Assert.Equal(2L, count);
+        }
         #endregion
     }
 }
