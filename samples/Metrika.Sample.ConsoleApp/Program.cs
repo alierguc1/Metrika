@@ -22,7 +22,7 @@ class Program
         Example7_TimestampFormats();
         await Example8_RealWorldScenario();
         Example9_IQueryableExtensions();
-
+        Example10_NewIQueryableMethods();
         System.Console.WriteLine("\n=== All Examples Completed ===");
         System.Console.WriteLine("Press any key to exit...");
         System.Console.ReadKey();
@@ -249,7 +249,92 @@ class Program
 
         System.Console.WriteLine();
     }
+    static void Example10_NewIQueryableMethods()
+    {
+        System.Console.WriteLine("--- Example 10: New IQueryable Methods (Single, Last, LongCount) ---");
 
+        // Simulate dataset
+        var users = new List<User>();
+        for (int i = 1; i <= 1000; i++)
+        {
+            users.Add(new User { Id = i, Name = $"User{i}", IsActive = i % 3 == 0 });
+        }
+
+        var queryable = users.AsQueryable();
+
+        // Test SingleWithMetrika - Exactly one result expected
+        try
+        {
+            var specificUser = queryable
+                .Where(u => u.Id == 500)
+                .SingleWithMetrika("Get User By ID", thresholdMs: 5);
+
+            System.Console.WriteLine($"  ✓ Single User: {specificUser.Name}");
+        }
+        catch (Exception ex)
+        {
+            System.Console.WriteLine($"  ✗ Single failed: {ex.Message}");
+        }
+
+        // Test SingleOrDefaultWithMetrika - May return null
+        var userOrNull = queryable
+            .Where(u => u.Id == 9999) // Doesn't exist
+            .SingleOrDefaultWithMetrika("Get Non-Existent User", thresholdMs: 5);
+
+        System.Console.WriteLine($"  ✓ SingleOrDefault Result: {(userOrNull == null ? "Not Found (null)" : userOrNull.Name)}");
+
+        // Test LastWithMetrika - Last element in ordered query
+        var lastActiveUser = queryable
+            .Where(u => u.IsActive)
+            .OrderBy(u => u.Id)
+            .LastWithMetrika("Get Last Active User", thresholdMs: 10);
+
+        System.Console.WriteLine($"  ✓ Last Active User: {lastActiveUser.Name} (ID: {lastActiveUser.Id})");
+
+        // Test LastOrDefaultWithMetrika - May return null
+        var lastInactiveUser = queryable
+            .Where(u => !u.IsActive)
+            .OrderBy(u => u.Id)
+            .LastOrDefaultWithMetrika("Get Last Inactive User", thresholdMs: 10);
+
+        System.Console.WriteLine($"  ✓ Last Inactive User: {lastInactiveUser?.Name ?? "None"}");
+
+        // Test LongCountWithMetrika - For large datasets
+        var totalCount = queryable
+            .LongCountWithMetrika("Count All Users (Long)", thresholdMs: 5);
+
+        System.Console.WriteLine($"  ✓ Total Count (long type): {totalCount:N0}");
+
+        // Complex scenario: Find unique user with error handling
+        try
+        {
+            var uniqueUser = queryable
+                .Where(u => u.Id == 42)
+                .SingleWithMetrika("Find User 42", thresholdMs: 5, trackMemory: true);
+
+            System.Console.WriteLine($"  ✓ Unique User Search: {uniqueUser.Name}");
+        }
+        catch (InvalidOperationException)
+        {
+            System.Console.WriteLine($"  ✗ Unique User Search: Not found or multiple results");
+        }
+
+        // Performance comparison: Count vs LongCount
+        System.Console.WriteLine("\n  Performance Comparison:");
+
+        var countResult = queryable
+            .Where(u => u.IsActive)
+            .CountWithMetrika("Count Active (int)", thresholdMs: 5);
+
+        var longCountResult = queryable
+            .Where(u => u.IsActive)
+            .LongCountWithMetrika("LongCount Active (long)", thresholdMs: 5);
+
+        System.Console.WriteLine($"  Count result: {countResult} (type: int)");
+        System.Console.WriteLine($"  LongCount result: {longCountResult} (type: long)");
+
+        System.Console.WriteLine();
+    }
     static async Task Example8_RealWorldScenario()
     {
         System.Console.WriteLine("--- Example 8: Real-World Scenario ---");
