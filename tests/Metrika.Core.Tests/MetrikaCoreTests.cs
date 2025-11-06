@@ -1446,8 +1446,6 @@ namespace Metrika.Core.Tests
 
             // Assert
             Assert.Equal(5000, result);
-
-            // Log'un çağrıldığını kontrol et (Warning veya Information olabilir)
             _mockLogger.Verify(
                 x => x.Log(
                     It.IsAny<LogLevel>(),
