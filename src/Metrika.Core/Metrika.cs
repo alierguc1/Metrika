@@ -83,16 +83,18 @@ namespace Metrika.Core
         /// <summary>
         /// Measures execution time and optional memory usage of an asynchronous function
         /// that returns a result. Logs the outcome using built-in or custom loggers.
+        /// If an exception occurs during execution, the measurement is still logged before re-throwing.
         /// </summary>
         /// <typeparam name="T">The result type of the asynchronous operation.</typeparam>
         /// <param name="task">The task to be measured.</param>
         /// <param name="name">A descriptive name for the measured operation.</param>
-        /// <param name="thresholdMs">An optional threshold in milliseconds that, when exceeded, marks the measurement as critical. </param>
+        /// <param name="thresholdMs">An optional threshold in milliseconds that, when exceeded, marks the measurement as critical.</param>
         /// <param name="logger">Optional <see cref="ILogger"/> instance for structured logging.</param>
         /// <param name="localization">Optional localization override for this measurement.</param>
         /// <param name="timestampFormat">Optional timestamp format override for this measurement.</param>
         /// <param name="trackMemory">Optional flag to enable or disable memory tracking for this call.</param>
         /// <returns>The awaited result of the original task.</returns>
+        /// <exception cref="Exception">Re-throws any exception that occurred during task execution.</exception>
         public static async Task<T> MetrikaAsync<T>(
             this Task<T> task,
             string name,
@@ -111,30 +113,46 @@ namespace Metrika.Core
             }
 
             var sw = Stopwatch.StartNew();
-            var result = await task;
-            sw.Stop();
+            Exception? caughtException = null;
+            T? result = default;
 
-            if (shouldTrackMemory && memoryInfo != null)
+            try
             {
-                EndMemoryTracking(memoryInfo);
+                result = await task;
+                return result!;
             }
-
-            var measurementResult = new MetrikaMeasurementResult
+            catch (Exception ex)
             {
-                Name = name,
-                ElapsedMilliseconds = sw.ElapsedMilliseconds,
-                ThresholdMilliseconds = thresholdMs,
-                MemoryInfo = memoryInfo,
-                Timestamp = DateTime.Now
-            };
+                caughtException = ex;
+                throw;
+            }
+            finally
+            {
+                sw.Stop();
 
-            LogResult(measurementResult, logger, localization, timestampFormat);
-            return result!;
+                if (shouldTrackMemory && memoryInfo != null)
+                {
+                    EndMemoryTracking(memoryInfo);
+                }
+
+                var measurementResult = new MetrikaMeasurementResult
+                {
+                    Name = name,
+                    ElapsedMilliseconds = sw.ElapsedMilliseconds,
+                    ThresholdMilliseconds = thresholdMs,
+                    MemoryInfo = memoryInfo,
+                    Timestamp = DateTime.Now,
+                    Exception = caughtException
+                };
+
+                LogResult(measurementResult, logger, localization, timestampFormat);
+            }
         }
 
         /// <summary>
         /// Measures execution time and optional memory usage of an asynchronous task
         /// that does not return a value. Logs the outcome using built-in or custom loggers.
+        /// If an exception occurs during execution, the measurement is still logged before re-throwing.
         /// </summary>
         /// <param name="task">The task to be measured.</param>
         /// <param name="name">A descriptive name for the measured operation.</param>
@@ -143,6 +161,7 @@ namespace Metrika.Core
         /// <param name="localization">Optional localization override for this measurement.</param>
         /// <param name="timestampFormat">Optional timestamp format override for this measurement.</param>
         /// <param name="trackMemory">Optional flag to enable or disable memory tracking for this call.</param>
+        /// <exception cref="Exception">Re-throws any exception that occurred during task execution.</exception>
         public static async Task MetrikaAsync(
             this Task task,
             string name,
@@ -161,24 +180,38 @@ namespace Metrika.Core
             }
 
             var sw = Stopwatch.StartNew();
-            await task;
-            sw.Stop();
+            Exception? caughtException = null;
 
-            if (shouldTrackMemory && memoryInfo != null)
+            try
             {
-                EndMemoryTracking(memoryInfo);
+                await task;
             }
-
-            var measurementResult = new MetrikaMeasurementResult
+            catch (Exception ex)
             {
-                Name = name,
-                ElapsedMilliseconds = sw.ElapsedMilliseconds,
-                ThresholdMilliseconds = thresholdMs,
-                MemoryInfo = memoryInfo,
-                Timestamp = DateTime.Now
-            };
+                caughtException = ex;
+                throw;
+            }
+            finally
+            {
+                sw.Stop();
 
-            LogResult(measurementResult, logger, localization, timestampFormat);
+                if (shouldTrackMemory && memoryInfo != null)
+                {
+                    EndMemoryTracking(memoryInfo);
+                }
+
+                var measurementResult = new MetrikaMeasurementResult
+                {
+                    Name = name,
+                    ElapsedMilliseconds = sw.ElapsedMilliseconds,
+                    ThresholdMilliseconds = thresholdMs,
+                    MemoryInfo = memoryInfo,
+                    Timestamp = DateTime.Now,
+                    Exception = caughtException
+                };
+
+                LogResult(measurementResult, logger, localization, timestampFormat);
+            }
         }
 
         #endregion
@@ -188,6 +221,7 @@ namespace Metrika.Core
         /// <summary>
         /// Measures the execution time and optional memory usage of a synchronous function
         /// that returns a value. Returns the original result while logging performance metrics.
+        /// If an exception occurs during execution, the measurement is still logged before re-throwing.
         /// </summary>
         /// <typeparam name="T">The return type of the function being measured.</typeparam>
         /// <param name="func">The function to execute and measure.</param>
@@ -198,6 +232,7 @@ namespace Metrika.Core
         /// <param name="timestampFormat">Optional timestamp format override for this measurement.</param>
         /// <param name="trackMemory">Optional flag to enable or disable memory tracking for this call.</param>
         /// <returns>The return value of the measured function.</returns>
+        /// <exception cref="Exception">Re-throws any exception that occurred during function execution.</exception>
         public static T Metrika<T>(
             this Func<T> func,
             string name,
@@ -216,30 +251,46 @@ namespace Metrika.Core
             }
 
             var sw = Stopwatch.StartNew();
-            var result = func();
-            sw.Stop();
+            Exception? caughtException = null;
+            T? result = default;
 
-            if (shouldTrackMemory && memoryInfo != null)
+            try
             {
-                EndMemoryTracking(memoryInfo);
+                result = func();
+                return result!;
             }
-
-            var measurementResult = new MetrikaMeasurementResult
+            catch (Exception ex)
             {
-                Name = name,
-                ElapsedMilliseconds = sw.ElapsedMilliseconds,
-                ThresholdMilliseconds = thresholdMs,
-                MemoryInfo = memoryInfo,
-                Timestamp = DateTime.Now
-            };
+                caughtException = ex;
+                throw; // Re-throw to preserve stack trace
+            }
+            finally
+            {
+                sw.Stop();
 
-            LogResult(measurementResult, logger, localization, timestampFormat);
-            return result!;
+                if (shouldTrackMemory && memoryInfo != null)
+                {
+                    EndMemoryTracking(memoryInfo);
+                }
+
+                var measurementResult = new MetrikaMeasurementResult
+                {
+                    Name = name,
+                    ElapsedMilliseconds = sw.ElapsedMilliseconds,
+                    ThresholdMilliseconds = thresholdMs,
+                    MemoryInfo = memoryInfo,
+                    Timestamp = DateTime.Now,
+                    Exception = caughtException
+                };
+
+                LogResult(measurementResult, logger, localization, timestampFormat);
+            }
         }
 
         /// <summary>
         /// Measures the execution time and optional memory usage of a synchronous action
         /// that does not return a value. Logs the measurement results to registered loggers.
+        /// If an exception occurs during execution, the measurement is still logged before re-throwing.
         /// </summary>
         /// <param name="action">The action to execute and measure.</param>
         /// <param name="name">A descriptive name for the measured operation.</param>
@@ -248,6 +299,7 @@ namespace Metrika.Core
         /// <param name="localization">Optional localization override for this measurement.</param>
         /// <param name="timestampFormat">Optional timestamp format override for this measurement.</param>
         /// <param name="trackMemory">Optional flag to enable or disable memory tracking for this call.</param>
+        /// <exception cref="Exception">Re-throws any exception that occurred during action execution.</exception>
         public static void Metrika(
             this Action action,
             string name,
@@ -266,24 +318,38 @@ namespace Metrika.Core
             }
 
             var sw = Stopwatch.StartNew();
-            action();
-            sw.Stop();
+            Exception? caughtException = null;
 
-            if (shouldTrackMemory && memoryInfo != null)
+            try
             {
-                EndMemoryTracking(memoryInfo);
+                action();
             }
-
-            var measurementResult = new MetrikaMeasurementResult
+            catch (Exception ex)
             {
-                Name = name,
-                ElapsedMilliseconds = sw.ElapsedMilliseconds,
-                ThresholdMilliseconds = thresholdMs,
-                MemoryInfo = memoryInfo,
-                Timestamp = DateTime.Now
-            };
+                caughtException = ex;
+                throw;
+            }
+            finally
+            {
+                sw.Stop();
 
-            LogResult(measurementResult, logger, localization, timestampFormat);
+                if (shouldTrackMemory && memoryInfo != null)
+                {
+                    EndMemoryTracking(memoryInfo);
+                }
+
+                var measurementResult = new MetrikaMeasurementResult
+                {
+                    Name = name,
+                    ElapsedMilliseconds = sw.ElapsedMilliseconds,
+                    ThresholdMilliseconds = thresholdMs,
+                    MemoryInfo = memoryInfo,
+                    Timestamp = DateTime.Now,
+                    Exception = caughtException
+                };
+
+                LogResult(measurementResult, logger, localization, timestampFormat);
+            }
         }
 
         #endregion
@@ -327,7 +393,7 @@ namespace Metrika.Core
 
         /// <summary>
         /// Logs the measurement result to both standard and custom loggers.
-        /// Handles localization, timestamp formatting, and threshold-based severity.
+        /// Handles localization, timestamp formatting, threshold-based severity, and exception logging.
         /// </summary>
         /// <param name="result">The measurement result to log.</param>
         /// <param name="logger">Optional <see cref="ILogger"/> for structured output.</param>
@@ -341,11 +407,43 @@ namespace Metrika.Core
         {
             if (logger != null)
             {
-                var logLevel = result.ThresholdExceeded ? LogLevel.Warning : LogLevel.Information;
-                var icon = result.ThresholdExceeded ? "⚠️" : "⏱️";
-                var durationText = result.ThresholdExceeded ? "duration high" : "duration";
+                // Determine log level based on exception and threshold
+                var logLevel = result.HasException ? LogLevel.Error
+                             : result.ThresholdExceeded ? LogLevel.Warning
+                             : LogLevel.Information;
 
-                if (result.MemoryInfo != null)
+                // Determine icon
+                var icon = result.HasException ? "❌"
+                         : result.ThresholdExceeded ? "⚠️"
+                         : "⏱️";
+
+                // Determine duration text
+                var durationText = result.HasException ? "failed after"
+                                 : result.ThresholdExceeded ? "duration high"
+                                 : "duration";
+
+                // Log with memory info and/or exception
+                if (result.HasException)
+                {
+                    if (result.MemoryInfo != null)
+                    {
+                        logger.Log(logLevel, result.Exception,
+                            "{Icon} {Name} {DurationText}: {Elapsed} ms | Memory: {MemoryDelta:+0.00;-0.00} MB | Exception: {ExceptionType}: {ExceptionMessage}",
+                            icon, result.Name, durationText, result.ElapsedMilliseconds,
+                            result.MemoryInfo.MemoryDeltaMB,
+                            result.Exception?.GetType().Name,
+                            result.Exception?.Message);
+                    }
+                    else
+                    {
+                        logger.Log(logLevel, result.Exception,
+                            "{Icon} {Name} {DurationText}: {Elapsed} ms | Exception: {ExceptionType}: {ExceptionMessage}",
+                            icon, result.Name, durationText, result.ElapsedMilliseconds,
+                            result.Exception?.GetType().Name,
+                            result.Exception?.Message);
+                    }
+                }
+                else if (result.MemoryInfo != null)
                 {
                     logger.Log(logLevel,
                         "{Icon} {Name} {DurationText}: {Elapsed} ms | Memory: {MemoryDelta:+0.00;-0.00} MB | GC: Gen0: {Gen0}, Gen1: {Gen1}, Gen2: {Gen2}",
@@ -357,7 +455,8 @@ namespace Metrika.Core
                 }
                 else
                 {
-                    logger.Log(logLevel, "{Icon} {Name} {DurationText}: {Elapsed} ms",
+                    logger.Log(logLevel,
+                        "{Icon} {Name} {DurationText}: {Elapsed} ms",
                         icon, result.Name, durationText, result.ElapsedMilliseconds);
                 }
             }

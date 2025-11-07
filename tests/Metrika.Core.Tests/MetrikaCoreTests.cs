@@ -989,7 +989,6 @@ namespace Metrika.Core.Tests
 
         #endregion
 
-
         #region IQueryable Extension Tests
 
         [Fact]
@@ -1517,5 +1516,142 @@ namespace Metrika.Core.Tests
             Assert.Equal(2L, count);
         }
         #endregion
+
+        #region Exception Handling Tests
+
+        [Fact]
+        public void Metrika_Func_WithException_LogsErrorAndRethrows()
+        {
+            // Arrange
+            Func<int> faultyFunc = () => throw new InvalidOperationException("Test error");
+
+            // Act & Assert
+            var exception = Assert.Throws<InvalidOperationException>(() =>
+                faultyFunc.Metrika("Faulty Operation", logger: _mockLogger.Object));
+
+            Assert.Equal("Test error", exception.Message);
+
+            // Verify error was logged
+            _mockLogger.Verify(
+                x => x.Log(
+                    LogLevel.Error,
+                    It.IsAny<EventId>(),
+                    It.Is<It.IsAnyType>((o, t) => o.ToString()!.Contains("Faulty Operation")),
+                    It.IsAny<Exception>(),
+                    It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+                Times.Once);
+        }
+
+        [Fact]
+        public void Metrika_Action_WithException_LogsErrorAndRethrows()
+        {
+            // Arrange
+            Action faultyAction = () => throw new ArgumentException("Invalid argument");
+
+            // Act & Assert
+            var exception = Assert.Throws<ArgumentException>(() =>
+                faultyAction.Metrika("Faulty Action", logger: _mockLogger.Object));
+
+            Assert.Equal("Invalid argument", exception.Message);
+
+            // Verify error was logged
+            _mockLogger.Verify(
+                x => x.Log(
+                    LogLevel.Error,
+                    It.IsAny<EventId>(),
+                    It.IsAny<It.IsAnyType>(),
+                    It.IsAny<Exception>(),
+                    It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+                Times.Once);
+        }
+
+        [Fact]
+        public async Task MetrikaAsync_TaskT_WithException_LogsErrorAndRethrows()
+        {
+            // Arrange
+            var faultyTask = Task.FromException<int>(new InvalidOperationException("Async error"));
+
+            // Act & Assert
+            var exception = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+                await faultyTask.MetrikaAsync("Faulty Async Task", logger: _mockLogger.Object));
+
+            Assert.Equal("Async error", exception.Message);
+
+            // Verify error was logged
+            _mockLogger.Verify(
+                x => x.Log(
+                    LogLevel.Error,
+                    It.IsAny<EventId>(),
+                    It.IsAny<It.IsAnyType>(),
+                    It.IsAny<Exception>(),
+                    It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+                Times.Once);
+        }
+
+        [Fact]
+        public async Task MetrikaAsync_Task_WithException_LogsErrorAndRethrows()
+        {
+            // Arrange
+            var faultyTask = Task.FromException(new Exception("Task error"));
+
+            // Act & Assert
+            var exception = await Assert.ThrowsAsync<Exception>(async () =>
+                await faultyTask.MetrikaAsync("Faulty Void Task", logger: _mockLogger.Object));
+
+            Assert.Equal("Task error", exception.Message);
+        }
+
+        [Fact]
+        public void Metrika_WithException_StillMeasuresTime()
+        {
+            // Arrange
+            Func<int> slowFaultyFunc = () =>
+            {
+                Thread.Sleep(50);
+                throw new Exception("After delay");
+            };
+
+            // Act & Assert
+            Assert.Throws<Exception>(() =>
+                slowFaultyFunc.Metrika("Slow Faulty", logger: _mockLogger.Object));
+
+            // Verify time was measured (>= 50ms)
+            _mockLogger.Verify(
+                x => x.Log(
+                    LogLevel.Error,
+                    It.IsAny<EventId>(),
+                    It.Is<It.IsAnyType>((o, t) => o.ToString()!.Contains("ms")),
+                    It.IsAny<Exception>(),
+                    It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+                Times.Once);
+        }
+
+        [Fact]
+        public void Metrika_WithExceptionAndMemoryTracking_LogsMemoryAndException()
+        {
+            // Arrange
+            Func<byte[]> faultyAllocFunc = () =>
+            {
+                var data = new byte[1_000_000]; // 1MB
+                throw new OutOfMemoryException("Simulated OOM");
+            };
+
+            // Act & Assert
+            Assert.Throws<OutOfMemoryException>(() =>
+                faultyAllocFunc.Metrika("Faulty Alloc", trackMemory: true, logger: _mockLogger.Object));
+
+            // Verify both memory and exception were logged
+            _mockLogger.Verify(
+                x => x.Log(
+                    LogLevel.Error,
+                    It.IsAny<EventId>(),
+                    It.Is<It.IsAnyType>((o, t) => o.ToString()!.Contains("Memory") && o.ToString()!.Contains("Exception")),
+                    It.IsAny<Exception>(),
+                    It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+                Times.Once);
+        }
+
+        #endregion
+
     }
 }

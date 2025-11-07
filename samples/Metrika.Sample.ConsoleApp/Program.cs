@@ -23,6 +23,9 @@ class Program
         await Example8_RealWorldScenario();
         Example9_IQueryableExtensions();
         Example10_NewIQueryableMethods();
+        Example11_ExceptionHandling();          
+        await Example12_AsyncExceptionHandling(); 
+        Example13_ExceptionWithMemoryTracking();
         System.Console.WriteLine("\n=== All Examples Completed ===");
         System.Console.WriteLine("Press any key to exit...");
         System.Console.ReadKey();
@@ -41,7 +44,187 @@ class Program
 
         System.Console.WriteLine("✓ Metrika Console Logger configured\n");
     }
+    static void Example11_ExceptionHandling()
+    {
+        System.Console.WriteLine("--- Example 11: Exception Handling ---");
 
+        // Success case for comparison
+        var successResult = new Func<int>(() =>
+        {
+            Thread.Sleep(50);
+            return 42;
+        }).Metrika("Successful Operation");
+        System.Console.WriteLine($"  ✓ Success: {successResult}");
+
+        // Exception in Func - still measures time
+        try
+        {
+            var result = new Func<int>(() =>
+            {
+                Thread.Sleep(80);
+                throw new InvalidOperationException("Database connection failed!");
+            }).Metrika("Database Query", thresholdMs: 100);
+        }
+        catch (InvalidOperationException ex)
+        {
+            System.Console.WriteLine($"  ✗ Caught: {ex.Message}");
+        }
+
+        // Exception in Action
+        try
+        {
+            new Action(() =>
+            {
+                Thread.Sleep(30);
+                throw new ArgumentException("Invalid user input");
+            }).Metrika("Validate Input");
+        }
+        catch (ArgumentException ex)
+        {
+            System.Console.WriteLine($"  ✗ Caught: {ex.Message}");
+        }
+
+        // Exception with threshold exceeded
+        try
+        {
+            var result = new Func<string>(() =>
+            {
+                Thread.Sleep(250);
+                throw new TimeoutException("Operation timed out after delay");
+            }).Metrika("Slow Operation with Error", thresholdMs: 200);
+        }
+        catch (TimeoutException ex)
+        {
+            System.Console.WriteLine($"  ✗ Caught (exceeded threshold): {ex.Message}");
+        }
+
+        System.Console.WriteLine();
+    }
+
+    static async Task Example12_AsyncExceptionHandling()
+    {
+        System.Console.WriteLine("--- Example 12: Async Exception Handling ---");
+
+        // Async Task<T> with exception
+        try
+        {
+            var result = await Task.Run(async () =>
+            {
+                await Task.Delay(60);
+                throw new HttpRequestException("API endpoint not found");
+                return "Success"; // Unreachable
+            }).MetrikaAsync("External API Call", thresholdMs: 100);
+        }
+        catch (HttpRequestException ex)
+        {
+            System.Console.WriteLine($"  ✗ Async Task<T> caught: {ex.Message}");
+        }
+
+        // Async Task (void) with exception
+        try
+        {
+            await Task.Run(async () =>
+            {
+                await Task.Delay(40);
+                throw new Exception("Background job failed");
+            }).MetrikaAsync("Background Job", thresholdMs: 50);
+        }
+        catch (Exception ex)
+        {
+            System.Console.WriteLine($"  ✗ Async Task caught: {ex.Message}");
+        }
+
+        // Mixed success and failure
+        System.Console.WriteLine("\n  Batch Processing (3 operations):");
+        for (int i = 1; i <= 3; i++)
+        {
+            try
+            {
+                await Task.Run(async () =>
+                {
+                    await Task.Delay(30 * i);
+                    if (i == 2)
+                        throw new Exception($"Operation {i} failed");
+                }).MetrikaAsync($"Batch Operation {i}", thresholdMs: 100);
+
+                System.Console.WriteLine($"    ✓ Operation {i} succeeded");
+            }
+            catch (Exception ex)
+            {
+                System.Console.WriteLine($"    ✗ Operation {i} failed: {ex.Message}");
+            }
+        }
+
+        System.Console.WriteLine();
+    }
+
+    static void Example13_ExceptionWithMemoryTracking()
+    {
+        System.Console.WriteLine("--- Example 13: Exception with Memory Tracking ---");
+
+        // Success with memory tracking (for comparison)
+        var successData = new Func<byte[]>(() =>
+        {
+            return new byte[5_000_000]; // 5MB
+        }).Metrika("Allocate Memory Successfully", trackMemory: true);
+        System.Console.WriteLine($"  ✓ Allocated: {successData.Length:N0} bytes");
+
+        // Exception after memory allocation
+        try
+        {
+            var failedData = new Func<byte[]>(() =>
+            {
+                var data = new byte[10_000_000]; // 10MB allocated
+                Thread.Sleep(50);
+                throw new OutOfMemoryException("Simulated memory exhaustion");
+            }).Metrika("Large Allocation Failure", trackMemory: true);
+        }
+        catch (OutOfMemoryException ex)
+        {
+            System.Console.WriteLine($"  ✗ Memory error caught: {ex.Message}");
+            System.Console.WriteLine($"    (Memory was tracked before exception)");
+        }
+
+        // Exception during file processing
+        try
+        {
+            var result = new Func<string>(() =>
+            {
+                var buffer = new byte[50_000_000]; // 50MB
+                Thread.Sleep(100);
+                throw new IOException("File read error after loading");
+            }).Metrika("Process Large File", thresholdMs: 150, trackMemory: true);
+        }
+        catch (IOException ex)
+        {
+            System.Console.WriteLine($"  ✗ I/O error caught: {ex.Message}");
+            System.Console.WriteLine($"    (50MB was allocated before failure)");
+        }
+
+        // Successful cleanup after exception
+        System.Console.WriteLine("\n  Cleanup Operations:");
+        for (int i = 1; i <= 2; i++)
+        {
+            try
+            {
+                new Func<int>(() =>
+                {
+                    var temp = new byte[20_000_000]; // 20MB
+                    if (i == 1)
+                        throw new Exception("Cleanup failed");
+                    return temp.Length;
+                }).Metrika($"Cleanup Task {i}", trackMemory: true);
+
+                System.Console.WriteLine($"    ✓ Cleanup {i} succeeded");
+            }
+            catch
+            {
+                System.Console.WriteLine($"    ✗ Cleanup {i} failed (memory tracked)");
+            }
+        }
+
+        System.Console.WriteLine();
+    }
     static void Example1_BasicMeasurement()
     {
         System.Console.WriteLine("--- Example 1: Basic Measurement ---");

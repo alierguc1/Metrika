@@ -27,6 +27,16 @@ namespace Metrika.Core.Models
         public int ThresholdMilliseconds { get; set; }
 
         /// <summary>
+        /// Gets or sets the exception that occurred during the measured operation, if any.
+        /// </summary>
+        public Exception? Exception { get; set; }
+
+        /// <summary>
+        /// Gets a value indicating whether an exception occurred during the measurement.
+        /// </summary>
+        public bool HasException => Exception != null;
+
+        /// <summary>
         /// Whether the threshold was exceeded
         /// </summary>
         public bool ThresholdExceeded => ThresholdMilliseconds > 0 && ElapsedMilliseconds > ThresholdMilliseconds;

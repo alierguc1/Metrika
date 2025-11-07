@@ -65,6 +65,7 @@
   - Count, **LongCount** (v1.3.0+) - For large datasets
   - Any
 - ⚡ **Zero Overhead** - Minimal performance impact
+- 🛡️ **Exception Handling** - Captures performance metrics even on failure (v1.4.0+)
 
 ---
 
@@ -618,6 +619,35 @@ var hasUsers = queryable
     .AnyWithMetrika("Check Active Users Exist", thresholdMs: 50);
 ```
 ---
+
+### 5. Exception Handling (⭐ NEW in v1.4.0)
+
+Metrika captures performance metrics **even when operations fail**, providing valuable debugging insights:
+```csharp
+try
+{
+    var result = new Func<List>(() =>
+    {
+        return database.GetUsers(); // May throw
+    }).Metrika("Get Users", thresholdMs: 500);
+}
+catch (SqlException ex)
+{
+    // Exception is logged with timing before reaching here
+    Console.WriteLine($"Failed: {ex.Message}");
+}
+
+// Output:
+// [METRIKA] [14:30:45] [ERROR] Get Users failed after: 3247 ms | Exception: SqlException: Connection timeout
+```
+
+**Key Benefits:**
+- ✅ **Stopwatch stops** even on exception
+- ✅ **Memory tracking completes** even on failure
+- ✅ **Performance data preserved** with error context
+- ✅ **Exception re-thrown** normally (stack trace intact)
+- ✅ **Red color output** for easy error identification
+
 
 ## 📚 Documentation
 
@@ -1183,11 +1213,24 @@ If you find this project helpful, please give it a ⭐️ on GitHub!
 
 ## 📋 Version History
 
-### v1.3.1 (Planned)
+
+### v1.4.0 (Current - November 2024)
+- 🛡️ **New:** Robust exception handling in all measurement methods
+- 🛡️ **New:** Exceptions logged with performance metrics before re-throwing
+- 🛡️ **New:** Stopwatch and memory tracking complete even on failure
+- 🛡️ **New:** `Exception` and `HasException` properties in `MetrikaMeasurementResult`
+- 🎨 **Enhanced:** Console logger displays exceptions with red color and `[ERROR]` prefix
+- 🧪 Comprehensive exception handling test coverage (6 new tests)
+- 📝 Exception handling examples in console app
+
+**Why v1.4.0 and not v1.3.2?**
+Exception handling is a **new feature** (not a bug fix), so according to [Semantic Versioning](https://semver.org/), we increment the MINOR version (1.3.x → 1.4.0), not the PATCH version.
+
+### v1.3.1  (November 2024)
 - 📝 Documentation improvements
 - 📚 Enhanced examples and guides
 
-### v1.3.0 (Current - November 2024)
+### v1.3.0 (November 2024)
 - ✨ **New:** `SingleWithMetrika` - For queries expecting exactly one result
 - ✨ **New:** `SingleOrDefaultWithMetrika` - For 0 or 1 expected results
 - ✨ **New:** `LastWithMetrika` - Get last element from ordered queries

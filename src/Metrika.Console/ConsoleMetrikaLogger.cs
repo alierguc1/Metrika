@@ -66,39 +66,66 @@ namespace Metrika.Console
                 }
             }
 
-            // Icon
-            var icon = result.ThresholdExceeded ? "[WARN]" : "[INFO]";
+            // Icon and severity level based on exception/threshold
+            string icon;
+            if (result.HasException) 
+            {
+                icon = "[ERROR]";
+            }
+            else if (result.ThresholdExceeded)
+            {
+                icon = "[WARN]";
+            }
+            else
+            {
+                icon = "[INFO]";
+            }
             parts.Add(icon);
 
             // Operation name and duration
-            var durationLabel = result.ThresholdExceeded ? localization.DurationHigh : localization.Duration;
-            parts.Add($"{result.Name} {durationLabel}: {result.ElapsedMilliseconds} {localization.Milliseconds}");
-
-            // Threshold info
-            if (result.ThresholdMilliseconds > 0)
+            if (result.HasException) 
             {
-                parts.Add($"({localization.Threshold}: {result.ThresholdMilliseconds} {localization.Milliseconds})");
+                parts.Add($"{result.Name} failed after: {result.ElapsedMilliseconds} {localization.Milliseconds}");
+
+                // Exception details
+                if (result.Exception != null)
+                {
+                    var exceptionType = result.Exception.GetType().Name;
+                    var exceptionMessage = result.Exception.Message;
+                    parts.Add($"| Exception: {exceptionType}: {exceptionMessage}");
+                }
             }
-
-            // Memory info
-            if (result.MemoryInfo != null)
+            else
             {
-                var memInfo = result.MemoryInfo;
-                parts.Add($"| {localization.Memory}: {memInfo.MemoryDeltaMB:+0.00;-0.00} MB");
+                var durationLabel = result.ThresholdExceeded ? localization.DurationHigh : localization.Duration;
+                parts.Add($"{result.Name} {durationLabel}: {result.ElapsedMilliseconds} {localization.Milliseconds}");
 
-                if (memInfo.TotalCollections > 0)
+                // Threshold info
+                if (result.ThresholdMilliseconds > 0 && result.ThresholdExceeded)
                 {
-                    parts.Add($"| {localization.GarbageCollection}: Gen0: {memInfo.Gen0Collections}, Gen1: {memInfo.Gen1Collections}, Gen2: {memInfo.Gen2Collections}");
+                    parts.Add($"({localization.Threshold}: {result.ThresholdMilliseconds} {localization.Milliseconds})");
                 }
 
-                // Warnings
-                if (memInfo.IsHighMemoryUsage)
+                // Memory info (only if no exception)
+                if (result.MemoryInfo != null)
                 {
-                    parts.Add($"[WARN] {localization.HighMemory}");
-                }
-                else if (memInfo.IsHighGCPressure)
-                {
-                    parts.Add($"[WARN] {localization.GCPressure}");
+                    var memInfo = result.MemoryInfo;
+                    parts.Add($"| {localization.Memory}: {memInfo.MemoryDeltaMB:+0.00;-0.00} MB");
+
+                    if (memInfo.TotalCollections > 0)
+                    {
+                        parts.Add($"| {localization.GarbageCollection}: Gen0: {memInfo.Gen0Collections}, Gen1: {memInfo.Gen1Collections}, Gen2: {memInfo.Gen2Collections}");
+                    }
+
+                    // Warnings
+                    if (memInfo.IsHighMemoryUsage)
+                    {
+                        parts.Add($"[WARN] {localization.HighMemory}");
+                    }
+                    else if (memInfo.IsHighGCPressure)
+                    {
+                        parts.Add($"[WARN] {localization.GCPressure}");
+                    }
                 }
             }
 
@@ -120,7 +147,13 @@ namespace Metrika.Console
 
         private ConsoleColor DetermineColor(MetrikaMeasurementResult result)
         {
-            // Threshold exceeded - highest priority
+            // Exception - highest priority (always red)
+            if (result.HasException)
+            {
+                return ConsoleColor.Red;
+            }
+
+            // Threshold exceeded
             if (result.ThresholdExceeded)
             {
                 return _colorScheme.ThresholdExceededColor;
